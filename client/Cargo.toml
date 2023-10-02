@@ -17,6 +17,7 @@ env_logger = "0.10"
 colored = "2"
 
 trust-dns-resolver = "0.23"
+openssl = { version = "0.10", features = ["vendored"] }
 hex = "0.4"
 rand = "0.8.5"
 aes = "0.8.1"

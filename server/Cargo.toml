@@ -28,7 +28,7 @@ simple-dns = "0.5.5"
 
 actix = "0.13"
 actix-web = { version = "4", features = ["openssl"] }
-openssl = "0.10"
+openssl = { version = "0.10", features = ["vendored"] }
 
 lazy_static = "1.4.0"
 mutex = "0.1.0"

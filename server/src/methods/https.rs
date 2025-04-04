@@ -3,7 +3,7 @@ extern crate lazy_static;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
-use log::{info,debug,trace};
+use log::{info,debug,trace,error};
 use colored::Colorize;
 use std::collections::HashMap;
 
@@ -35,11 +35,9 @@ async fn index(
    // If csrf cookie is set then try to extract datas
    if let Some(cookie) = req.cookie("csrf") {
       debug!("Received data from csrf cookie: {:?}", cookie.value());
-      get_data(
-         cookie.value().to_string(),
-         &mut _map,
-         &key,
-      )
+      if let Err(e) = get_data(cookie.value().to_string(), &mut _map, &key,) {
+         error!("Error while processing data: {:?}", e); 
+      }
    }
 
    // Return ok to client

